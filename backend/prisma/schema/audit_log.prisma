@@ -1,0 +1,23 @@
+model AuditLog {
+  id          String      @id @default(uuid())
+  action      AuditAction
+  entityType  String
+  entityId    String
+  description String
+  oldValue    Json?
+  newValue    Json?
+  metadata    Json?
+
+  // null => system action (e.g. payment gateway callback)
+  actorId   String?
+  actorRole Role?
+  actor     User?   @relation(fields: [actorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([entityType, entityId], name: "idx_audit_entity")
+  @@index([actorId], name: "idx_audit_actor")
+  @@index([action], name: "idx_audit_action")
+  @@index([createdAt], name: "idx_audit_createdAt")
+  @@map("audit_logs")
+}

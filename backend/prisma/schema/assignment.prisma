@@ -1,0 +1,29 @@
+model Assignment {
+  id             String           @id @default(uuid())
+  status         AssignmentStatus @default(PENDING)
+  scheduledStart DateTime         
+  scheduledEnd   DateTime
+  actualStart    DateTime?        
+  actualEnd      DateTime?        
+  notes          String?          
+  confirmedAt    DateTime?        
+  cancelledAt    DateTime?
+  cancelReason   String?
+  cancelledBy    String?          
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  serviceRequestId String
+  serviceRequest   ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  technicianId String
+  technician   Technician @relation(fields: [technicianId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  workOrder WorkOrder?
+
+  @@index([serviceRequestId], name: "idx_assignment_serviceRequestId")
+  @@index([technicianId],     name: "idx_assignment_technicianId")
+  @@index([status],           name: "idx_assignment_status")
+  @@index([scheduledStart],   name: "idx_assignment_scheduledStart")
+  @@map("assignments")
+}

@@ -1,0 +1,84 @@
+model WorkOrder {
+  id                 String          @id @default(uuid())
+  status             WorkOrderStatus @default(SCHEDULED)
+
+  problemFound    String?
+  workDescription String?
+
+  laborHours         Decimal? @db.Decimal(5, 2)
+  completionNotes    String?
+  completionImageUrl String?  
+  completionPublicId String?
+
+  startedAt   DateTime? 
+  completedAt DateTime? 
+  verifiedAt  DateTime? 
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignmentId String     @unique
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  parts WorkOrderPart[]
+  serviceReport ServiceReport?
+  payment Payment?
+
+  attachments WorkOrderAttachment[]
+
+  @@index([status], name: "idx_wo_status")
+  @@map("work_orders")
+}
+
+// Parts and materials used during the job
+// Queryable — unlike a Json field, you can sum costs, filter by part name etc.
+model WorkOrderPart {
+  id        String   @id @default(uuid())
+  name      String
+  quantity  Int      @default(1)
+  unitCost  Decimal  @db.Decimal(10, 2)
+  totalCost Decimal  @db.Decimal(10, 2) // quantity * unitCost (stored for reporting)
+  notes     String?
+  createdAt DateTime @default(now())
+
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([workOrderId], name: "idx_wo_part_workOrderId")
+  @@map("work_order_parts")
+}
+
+// Service report — written by technician after completing the job
+// Healthcare equivalent: Appointment.prescriptionUrl (the formal document after the visit)
+model ServiceReport {
+  id              String   @id @default(uuid())
+  summary         String
+  findings        String
+  recommendations String?
+  reportUrl       String?  // uploaded PDF or doc
+  reportPublicId  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  workOrderId String    @unique
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("service_reports")
+}
+
+// Photos/files technician uploads during the job (before/after photos etc.)
+// Healthcare equivalent: Appointment.recordUrl (but multiple files)
+model WorkOrderAttachment {
+  id        String   @id @default(uuid())
+  url       String
+  publicId  String
+  fileType  String
+  fileName  String?
+  createdAt DateTime @default(now())
+
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([workOrderId], name: "idx_woa_workOrderId")
+  @@map("work_order_attachments")
+}
