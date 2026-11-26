@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
-  output: "standalone",
+  output: process.env.VERCEL ? undefined : "standalone",
 
   async rewrites() {
     const backend = process.env.BACKEND_API_URL;
