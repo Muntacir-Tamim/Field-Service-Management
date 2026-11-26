@@ -130,6 +130,44 @@ import { prisma } from "../lib/prisma";
 const hashPassword = (password: string) =>
   bcrypt.hash(password, Number(config.bcrypt_salt_rounds));
 
+const syncExistingAdmin = async (userId: string) => {
+  const {
+    admin_name: name,
+    admin_email: email,
+    admin_password: password,
+  } = config;
+  if (!name || !email || !password) {
+    throw new Error("TESTER_ADMIN_* must be set to sync the admin");
+  }
+
+  const other = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+  if (other && other.id !== userId) {
+    throw new Error(`Cannot sync admin: "${email}" belongs to another user.`);
+  }
+
+  const hashedPassword = await hashPassword(password);
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        emailVerified: true,
+        needPasswordChange: false,
+        status: "ACTIVE",
+        isDeleted: false,
+        deletedAt: null,
+      },
+    });
+    await tx.admin.update({ where: { userId }, data: { name, email } });
+  });
+  console.log(`Existing admin synced from env: ${email}`);
+};
+
 /**
  * Creates THE single admin of the system.
  *
@@ -148,6 +186,12 @@ export const seedAdmin = async () => {
     });
 
     if (existingAdmin) {
+      // Opt-in: make the EXISTING admin match the env credentials
+      // (set SYNC_ADMIN_FROM_ENV=true once, then remove it).
+      if (config.sync_admin_from_env) {
+        await syncExistingAdmin(existingAdmin.id);
+        return;
+      }
       console.log("Admin already exists. Skipping admin seed.");
       return;
     }
@@ -261,5 +305,64 @@ export const seedTechnician = async () => {
     console.log(`Dev Technician created: ${user.email}`);
   } catch (error) {
     console.error("Error seeding dev technician:", error);
+  }
+};
+
+/**
+ * Development-only demo customer (the real signup needs an email OTP,
+ * which a fake demo address can never receive).
+ * Never runs when NODE_ENV=production.
+ */
+export const seedCustomer = async () => {
+  if (config.node_env === "production") return;
+
+  try {
+    const name = config.customer_name;
+    const email = config.customer_email;
+    const password = config.customer_password;
+
+    if (!name || !email || !password) {
+      console.log("Demo customer env not set. Skipping demo customer seed.");
+      return;
+    }
+
+    const exists = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+
+    if (exists) {
+      console.log("Demo Customer already exists.");
+      return;
+    }
+
+    const hashedPassword = await hashPassword(password);
+
+    const user = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          role: Role.CUSTOMER,
+          needPasswordChange: false,
+          emailVerified: true,
+        },
+      });
+
+      await tx.customer.create({
+        data: {
+          userId: created.id,
+          name: created.name,
+          email: created.email,
+        },
+      });
+
+      return created;
+    });
+
+    console.log(`Demo Customer created: ${user.email}`);
+  } catch (error) {
+    console.error("Error seeding demo customer:", error);
   }
 };
