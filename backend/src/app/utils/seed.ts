@@ -168,16 +168,6 @@ const syncExistingAdmin = async (userId: string) => {
   console.log(`Existing admin synced from env: ${email}`);
 };
 
-/**
- * Creates THE single admin of the system.
- *
- * Rules:
- * - Runs on every start but is safe to repeat (does nothing if an admin exists).
- * - Never deletes anything. User + admin profile are created in ONE transaction,
- *   so a failure leaves nothing half-created.
- * - The database also enforces "only one admin" (unique indexes
- *   only_one_admin_user / only_one_admin_profile), even if two servers start together.
- */
 export const seedAdmin = async () => {
   try {
     const existingAdmin = await prisma.user.findFirst({
@@ -186,8 +176,6 @@ export const seedAdmin = async () => {
     });
 
     if (existingAdmin) {
-      // Opt-in: make the EXISTING admin match the env credentials
-      // (set SYNC_ADMIN_FROM_ENV=true once, then remove it).
       if (config.sync_admin_from_env) {
         await syncExistingAdmin(existingAdmin.id);
         return;
@@ -250,10 +238,6 @@ export const seedAdmin = async () => {
   }
 };
 
-/**
- * Development-only technician for quick testing.
- * Never runs when NODE_ENV=production.
- */
 export const seedTechnician = async () => {
   if (config.node_env === "production") return;
 
@@ -296,6 +280,7 @@ export const seedTechnician = async () => {
           userId: created.id,
           name: created.name,
           email: created.email,
+          verificationStatus: "APPROVED",
         },
       });
 
@@ -308,11 +293,6 @@ export const seedTechnician = async () => {
   }
 };
 
-/**
- * Development-only demo customer (the real signup needs an email OTP,
- * which a fake demo address can never receive).
- * Never runs when NODE_ENV=production.
- */
 export const seedCustomer = async () => {
   if (config.node_env === "production") return;
 
