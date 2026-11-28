@@ -1,5 +1,6 @@
 import app from "./app";
 import config from "./app/config";
+import { startTechnicianReindexJob } from "./app/jobs/technicianReindex.job";
 import { startVisitReminderJob } from "./app/jobs/visitReminder.job";
 import { transporter } from "./app/lib/nodemailer";
 import { prisma } from "./app/lib/prisma";
@@ -23,6 +24,7 @@ const main = async () => {
     await seedAdmin();
     await seedCustomer();
     startVisitReminderJob();
+    startTechnicianReindexJob();
 
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);

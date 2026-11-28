@@ -50,6 +50,7 @@ model Technician {
 
   skills      TechnicianSkill[]  
   assignments Assignment[]      
+  feedbackSummary TechnicianFeedbackSummary?
 
 
   @@index([isAvailable], name: "idx_technician_isAvailable")

@@ -1,0 +1,22 @@
+
+model TechnicianEmbedding {
+  id        String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  content   String?
+  metadata  Json?
+  embedding Unsupported("vector")
+
+  @@map("technician_embeddings")
+}
+
+model TechnicianFeedbackSummary {
+  id            String   @id @default(uuid())
+  content       String
+  feedbackCount Int
+  generatedAt   DateTime @default(now())
+  expiresAt     DateTime
+
+  technicianId String     @unique
+  technician   Technician @relation(fields: [technicianId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("technician_feedback_summaries")
+}

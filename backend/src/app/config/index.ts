@@ -41,6 +41,18 @@ export default {
   bkash_app_key: process.env.BKASH_APP_KEY!,
   bkash_app_secret: process.env.BKASH_APP_SECRET!,
   bkash_callback_url: process.env.BKASH_CALLBACK_URL!,
+  // AI / LLM / RAG
+  anthropic_api_key: process.env.ANTHROPIC_API_KEY,
+  anthropic_chat_model: process.env.ANTHROPIC_CHAT_MODEL ?? "claude-haiku-5-5",
+  openrouter_api_key: process.env.OPENROUTER_API_KEY,
+  openrouter_chat_model:
+    process.env.OPENROUTER_CHAT_MODEL ?? "openai/gpt-4o-mini",
+  openrouter_fallback_chat_models: process.env.OPENROUTER_FALLBACK_CHAT_MODELS,
+  openrouter_embedding_model:
+    process.env.OPENROUTER_EMBEDDING_MODEL ?? "openai/text-embedding-3-small",
+  chat_max_distance: process.env.CHAT_MAX_DISTANCE
+    ? Number(process.env.CHAT_MAX_DISTANCE)
+    : undefined,
   labor_rate_per_hour: Number(process.env.LABOR_RATE_PER_HOUR ?? 500),
   tax_rate_percent: Number(process.env.TAX_RATE_PERCENT ?? 0),
 };

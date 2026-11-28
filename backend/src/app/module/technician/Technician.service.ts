@@ -14,6 +14,7 @@ import { prisma } from "../../lib/prisma";
 import { redisClient } from "../../lib/redis";
 import { AppError } from "../../utils/AppError";
 import type { IRequestUser } from "../auth/auth.interface";
+import { syncTechnicianEmbedding } from "../chat/chat.indexer";
 import { NotificationEvents } from "../notification/notification.events";
 import { AuditLogServices } from "../audit-log/audit-log.service";
 import {
@@ -422,6 +423,9 @@ const reviewTechnician = async (
 
   void NotificationEvents.technicianApplicationReviewed(technicianId);
 
+  // approved technicians become searchable in the chatbot
+  if (isApproved) syncTechnicianEmbedding(technicianId);
+
   return result;
 };
 
@@ -510,11 +514,14 @@ const updateMyProfile = async (
   payload: IUpdateTechnicianProfilePayload,
 ) => {
   const technician = await getTechnicianOrThrow(user);
-  return prisma.technician.update({
+  const updated = await prisma.technician.update({
     where: { id: technician.id },
     data: payload,
     include: technicianInclude,
   });
+
+  syncTechnicianEmbedding(technician.id); // bio / experience / address changed
+  return updated;
 };
 
 const updateMyAvailability = async (
@@ -553,6 +560,8 @@ const addMySkill = async (user: IRequestUser, payload: IAddSkillPayload) => {
     update: payload.level ? { level: payload.level } : {},
   });
 
+  syncTechnicianEmbedding(technician.id);
+
   return prisma.technicianSkill.findMany({
     where: { technicianId: technician.id },
     select: { level: true, certifiedAt: true, skill: true },
@@ -580,6 +589,8 @@ const removeMySkill = async (user: IRequestUser, skillId: string) => {
   await prisma.technicianSkill.delete({
     where: { technicianId_skillId: { technicianId: technician.id, skillId } },
   });
+
+  syncTechnicianEmbedding(technician.id);
 
   return prisma.technicianSkill.findMany({
     where: { technicianId: technician.id },
